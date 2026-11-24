@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { PaperType, PAPER_TYPE_LABELS } from '../types';
 import { compressImage } from '../lib/imageUtils';
 import { getCurrentLocation, getPlaceNameFromCoordinates } from '../lib/locationUtils';
+import { extractExifInfo } from '../lib/exifUtils';
 import { ImageCropper } from '../components/ImageCropper';
 import { LocationPickerModal } from '../components/LocationPickerModal';
 import {
@@ -17,19 +18,20 @@ import {
   Loader2,
   Check,
   X,
+  Info,
 } from 'lucide-react';
 
 export const AddItemPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // 写真のファイル・切り抜き用ステート
+  // 写真ファイル・切り抜き用ステート
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isCropping, setIsCropping] = useState(false);
 
-  // フォーム入力ステート（初期値は「スタンプ」）
+  // フォーム入力ステート
   const [type, setType] = useState<PaperType>('stamp');
   const [title, setTitle] = useState('');
   const [memo, setMemo] = useState('');
@@ -37,11 +39,14 @@ export const AddItemPage: React.FC = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
+  // 日付の取得元ラベル（EXIF撮影日、ファイル更新日、今日など）
+  const [dateSourceNote, setDateSourceNote] = useState<string | null>(null);
 
   // 位置情報ステート
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [placeName, setPlaceName] = useState<string | null>(null);
+  const [locationSourceNote, setLocationSourceNote] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
@@ -51,14 +56,45 @@ export const AddItemPage: React.FC = () => {
   const [saveStepMessage, setSaveStepMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // ファイル入力の参照（カメラ用・ギャラリー用）
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchCurrentLocation();
-  }, []);
+  // 写真ファイルが選ばれた時のハンドラー（加工前にEXIF情報を読み取り）
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    // 1. 加工・圧縮の前に、元ファイルからEXIF（撮影日時・GPS）を抽出
+    try {
+      const exifResult = await extractExifInfo(file);
+      setTakenDate(exifResult.date);
+      setDateSourceNote(exifResult.dateSourceLabel);
+
+      // 写真にGPS情報が記録されている場合はそれを最優先で使用
+      if (exifResult.gps) {
+        setLat(exifResult.gps.lat);
+        setLng(exifResult.gps.lng);
+        setLocationSourceNote('写真のGPS情報から自動入力しました');
+        setLocationError(null);
+        getPlaceNameFromCoordinates(exifResult.gps.lat, exifResult.gps.lng).then((name) => {
+          setPlaceName(name);
+        });
+      } else if (!lat && !lng) {
+        // 写真にGPSがなければ、端末の現在地取得を試みる
+        fetchCurrentLocation();
+      }
+    } catch (err) {
+      console.warn('EXIF解析エラー:', err);
+    }
+
+    // 2. 切り抜きモーダルを起動
+    const objectUrl = URL.createObjectURL(file);
+    setRawImageSrc(objectUrl);
+    setIsCropping(true);
+    e.target.value = '';
+  };
+
+  // 端末の現在地（Geolocation API）を取得
   const fetchCurrentLocation = async () => {
     setIsLocating(true);
     setLocationError(null);
@@ -66,6 +102,7 @@ export const AddItemPage: React.FC = () => {
       const loc = await getCurrentLocation();
       setLat(loc.lat);
       setLng(loc.lng);
+      setLocationSourceNote('現在地から自動入力しました');
       const name = await getPlaceNameFromCoordinates(loc.lat, loc.lng);
       setPlaceName(name);
     } catch (err: any) {
@@ -73,16 +110,6 @@ export const AddItemPage: React.FC = () => {
     } finally {
       setIsLocating(false);
     }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const objectUrl = URL.createObjectURL(file);
-    setRawImageSrc(objectUrl);
-    setIsCropping(true);
-    e.target.value = '';
   };
 
   const handleCropComplete = (blob: Blob, url: string) => {
@@ -102,6 +129,7 @@ export const AddItemPage: React.FC = () => {
     setLat(selectedLat);
     setLng(selectedLng);
     setPlaceName(selectedName);
+    setLocationSourceNote('地図から指定しました');
     setLocationError(null);
   };
 
@@ -123,9 +151,11 @@ export const AddItemPage: React.FC = () => {
       setIsSaving(true);
       setErrorMessage(null);
 
+      // 画像の軽量化
       setSaveStepMessage('写真を圧縮しています...');
       const compressedFile = await compressImage(croppedBlob);
 
+      // Supabase Storage に保存
       setSaveStepMessage('写真をクラウドに保存しています...');
       const fileId = crypto.randomUUID();
       const filePath = `${user.id}/${fileId}.jpg`;
@@ -141,6 +171,7 @@ export const AddItemPage: React.FC = () => {
         throw new Error(`画像の保存に失敗しました: ${uploadError.message}`);
       }
 
+      // items テーブルにレコード作成
       setSaveStepMessage('記録を保存しています...');
       const takenDateTime = new Date(`${takenDate}T12:00:00Z`).toISOString();
 
@@ -269,7 +300,7 @@ export const AddItemPage: React.FC = () => {
       </div>
 
       <form onSubmit={handleSave} className="space-y-4">
-        {/* 種類選択（スタンプ / 半券・チケット / その他 の3択） */}
+        {/* 種類選択 */}
         <div>
           <label className="block text-xs font-semibold text-stone-700 mb-1.5">
             種類 <span className="text-red-500">*</span>
@@ -310,29 +341,47 @@ export const AddItemPage: React.FC = () => {
           />
         </div>
 
-        {/* 日付 */}
+        {/* 日付（EXIF撮影日からの自動入力対応） */}
         <div>
-          <label className="block text-xs font-semibold text-stone-700 mb-1">
-            受け取った日 <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-semibold text-stone-700">
+              受け取った日（訪問日） <span className="text-red-500">*</span>
+            </label>
+            {dateSourceNote && (
+              <span className="text-[10px] text-amber-800 flex items-center gap-0.5 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                <Info className="w-3 h-3" />
+                {dateSourceNote}
+              </span>
+            )}
+          </div>
           <div className="relative">
             <Calendar className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="date"
               value={takenDate}
-              onChange={(e) => setTakenDate(e.target.value)}
+              onChange={(e) => {
+                setTakenDate(e.target.value);
+                setDateSourceNote('日付を手動変更しました');
+              }}
               required
               className="w-full pl-10 pr-3.5 py-2.5 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-700/30 focus:border-amber-700"
             />
           </div>
         </div>
 
-        {/* 場所 */}
+        {/* 場所（EXIF GPSまたはGeolocationから自動入力） */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-semibold text-stone-700">
-              受け取った場所（地図用）
-            </label>
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-stone-700">
+                受け取った場所（地図用）
+              </label>
+              {locationSourceNote && (
+                <span className="text-[10px] text-stone-500">
+                  （{locationSourceNote}）
+                </span>
+              )}
+            </div>
             {lat && lng && (
               <button
                 type="button"
@@ -340,6 +389,7 @@ export const AddItemPage: React.FC = () => {
                   setLat(null);
                   setLng(null);
                   setPlaceName(null);
+                  setLocationSourceNote(null);
                 }}
                 className="text-[11px] text-stone-400 hover:text-stone-600 flex items-center gap-0.5"
               >
