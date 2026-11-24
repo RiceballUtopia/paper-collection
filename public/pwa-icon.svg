@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="128" fill="#f5f2eb"/>
+  <rect x="76" y="86" width="360" height="340" rx="36" fill="#ffffff" stroke="#ddd0b8" stroke-width="12" filter="drop-shadow(0 12px 24px rgba(66, 55, 44, 0.12))"/>
+  <!-- 紙の折り目と質感ライン -->
+  <line x1="120" y1="180" x2="392" y2="180" stroke="#f0ebe1" stroke-width="8" stroke-linecap="round"/>
+  <line x1="120" y1="230" x2="350" y2="230" stroke="#f0ebe1" stroke-width="8" stroke-linecap="round"/>
+  <line x1="120" y1="280" x2="370" y2="280" stroke="#f0ebe1" stroke-width="8" stroke-linecap="round"/>
+  <!-- スタンプ調のワンポイント -->
+  <circle cx="340" cy="330" r="50" fill="#9a3412" fill-opacity="0.12" stroke="#9a3412" stroke-width="6" stroke-dasharray="8 6"/>
+  <text x="340" y="342" font-family="serif" font-size="32" font-weight="bold" fill="#9a3412" text-anchor="middle">紙</text>
+  <!-- ピン留めアクセント -->
+  <circle cx="256" cy="116" r="14" fill="#b45309" stroke="#ffffff" stroke-width="4"/>
+</svg>

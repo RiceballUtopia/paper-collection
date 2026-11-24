@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { PaperType, PAPER_TYPE_LABELS, Item, ItemWithUrl } from '../types';
+import { TiltCard } from '../components/TiltCard';
 import {
   ArrowLeft,
   Calendar,
@@ -218,14 +219,15 @@ export const ItemDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* メイン写真カード（紙もの・ポラロイド風フレーム） */}
-      <div className="bg-white rounded-3xl p-3 border border-paper-200 shadow-md">
-        <div className="relative rounded-2xl overflow-hidden bg-stone-900/5 max-h-[70vh] flex items-center justify-center">
+      {/* 傾き・光沢エフェクト付きのメインカード */}
+      <TiltCard className="bg-white p-3.5 border border-paper-200 shadow-lg">
+        {/* 写真領域 */}
+        <div className="relative rounded-2xl overflow-hidden bg-stone-900/5 max-h-[65vh] flex items-center justify-center">
           {item.imageUrl ? (
             <img
               src={item.imageUrl}
               alt={item.title}
-              className="w-full h-auto max-h-[65vh] object-contain mx-auto shadow-inner"
+              className="w-full h-auto max-h-[60vh] object-contain mx-auto select-none pointer-events-none"
             />
           ) : (
             <div className="py-20 text-stone-400 text-xs">画像を読み込めませんでした</div>
@@ -233,7 +235,7 @@ export const ItemDetailPage: React.FC = () => {
         </div>
 
         {/* 写真の下の紙もの情報 */}
-        <div className="pt-4 pb-2 px-2 space-y-3">
+        <div className="pt-4 pb-2 px-1.5 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div>
               <span className="inline-block px-2.5 py-0.5 bg-amber-100 text-amber-900 text-[11px] font-bold rounded-full mb-1">
@@ -269,7 +271,7 @@ export const ItemDetailPage: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </TiltCard>
 
       {/* 編集モーダル */}
       {isEditing && (
