@@ -3,7 +3,7 @@
 -- Supabase セットアップ & マイグレーション SQL
 -- ==============================================================================
 
--- 1. items テーブルの作成
+-- 1. items テーブルの作成（pref_code 列を含む）
 CREATE TABLE IF NOT EXISTS public.items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -15,8 +15,12 @@ CREATE TABLE IF NOT EXISTS public.items (
     lat DOUBLE PRECISION,
     lng DOUBLE PRECISION,
     place_name TEXT,
+    pref_code SMALLINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- pref_code 列の追加（既存テーブル用）
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS pref_code SMALLINT;
 
 -- 既存データの 'letter' を 'other' に移行
 UPDATE public.items SET type = 'other' WHERE type = 'letter';
@@ -28,6 +32,7 @@ ALTER TABLE public.items ADD CONSTRAINT items_type_check CHECK (type IN ('stamp'
 -- 検索用インデックス
 CREATE INDEX IF NOT EXISTS items_user_id_idx ON public.items(user_id);
 CREATE INDEX IF NOT EXISTS items_taken_at_idx ON public.items(taken_at DESC);
+CREATE INDEX IF NOT EXISTS items_pref_code_idx ON public.items(pref_code);
 
 -- 2. ロールに対するスキーマとテーブルの権限付与（GRANT）
 GRANT USAGE ON SCHEMA public TO anon, authenticated;

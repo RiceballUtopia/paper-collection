@@ -6,6 +6,7 @@ import { PaperType, PAPER_TYPE_LABELS } from '../types';
 import { compressImage } from '../lib/imageUtils';
 import { getCurrentLocation, getPlaceNameFromCoordinates } from '../lib/locationUtils';
 import { extractExifInfo } from '../lib/exifUtils';
+import { getPrefectureCodeFromCoordinates } from '../lib/geoUtils';
 import { ImageCropper } from '../components/ImageCropper';
 import { LocationPickerModal } from '../components/LocationPickerModal';
 import {
@@ -185,6 +186,7 @@ export const AddItemPage: React.FC = () => {
         lat,
         lng,
         place_name: placeName,
+        pref_code: lat && lng ? getPrefectureCodeFromCoordinates(lat, lng) : null,
       });
 
       if (dbError) {
