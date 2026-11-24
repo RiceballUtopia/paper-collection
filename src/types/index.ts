@@ -1,11 +1,10 @@
-// 紙ものの種類（4種類）
-export type PaperType = 'stamp' | 'ticket' | 'letter' | 'other';
+// 紙ものの種類（3種類：スタンプ、半券・チケット、その他）
+export type PaperType = 'stamp' | 'ticket' | 'other';
 
-// 各種別の日本語ラベルとアイコン表示用の定義
+// 各種別の日本語ラベル定義
 export const PAPER_TYPE_LABELS: Record<PaperType, string> = {
   stamp: 'スタンプ',
   ticket: '半券・チケット',
-  letter: '手紙',
   other: 'その他',
 };
 
@@ -21,6 +20,7 @@ export interface Item {
   lat: number | null;      // 緯度
   lng: number | null;      // 経度
   place_name: string | null; // 場所の名前
+  pref_code?: number | null; // 都道府県コード (JIS X 0401: 1〜47)
   created_at: string;      // 登録日時
 }
 
@@ -38,6 +38,7 @@ export interface CreateItemInput {
   lat?: number | null;
   lng?: number | null;
   place_name?: string | null;
+  pref_code?: number | null;
   imageFile: Blob;
 }
 

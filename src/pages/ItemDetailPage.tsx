@@ -296,7 +296,7 @@ export const ItemDetailPage: React.FC = () => {
                 <label className="block text-xs font-semibold text-stone-700 mb-1">
                   種類
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {(Object.keys(PAPER_TYPE_LABELS) as PaperType[]).map((t) => (
                     <button
                       key={t}

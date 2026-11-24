@@ -29,11 +29,10 @@ export const AddItemPage: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isCropping, setIsCropping] = useState(false);
 
-  // フォーム入力ステート
+  // フォーム入力ステート（初期値は「スタンプ」）
   const [type, setType] = useState<PaperType>('stamp');
   const [title, setTitle] = useState('');
   const [memo, setMemo] = useState('');
-  // 今日の日付 (YYYY-MM-DD) を初期値に設定
   const [takenDate, setTakenDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -56,12 +55,10 @@ export const AddItemPage: React.FC = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  // 画面を開いたときに自動で現在地を取得してみる
   useEffect(() => {
     fetchCurrentLocation();
   }, []);
 
-  // 現在地を取得する処理
   const fetchCurrentLocation = async () => {
     setIsLocating(true);
     setLocationError(null);
@@ -69,18 +66,15 @@ export const AddItemPage: React.FC = () => {
       const loc = await getCurrentLocation();
       setLat(loc.lat);
       setLng(loc.lng);
-      // 緯度経度から地名を取得
       const name = await getPlaceNameFromCoordinates(loc.lat, loc.lng);
       setPlaceName(name);
     } catch (err: any) {
-      // ユーザーが位置情報を許可しなかった場合など
       setLocationError(err.message || '位置情報を取得できませんでした。');
     } finally {
       setIsLocating(false);
     }
   };
 
-  // ファイルが選ばれた時のハンドラー
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -88,18 +82,15 @@ export const AddItemPage: React.FC = () => {
     const objectUrl = URL.createObjectURL(file);
     setRawImageSrc(objectUrl);
     setIsCropping(true);
-    // 同じファイルを再度選択できるようにinputの値をリセット
     e.target.value = '';
   };
 
-  // トリミングが完了した時
   const handleCropComplete = (blob: Blob, url: string) => {
     setCroppedBlob(blob);
     setPreviewUrl(url);
     setIsCropping(false);
   };
 
-  // トリミングをキャンセルした時
   const handleCropCancel = () => {
     setIsCropping(false);
     if (!previewUrl) {
@@ -107,7 +98,6 @@ export const AddItemPage: React.FC = () => {
     }
   };
 
-  // 地図ピッカーモーダルで場所が選ばれた時
   const handleLocationSelected = (selectedLat: number, selectedLng: number, selectedName: string) => {
     setLat(selectedLat);
     setLng(selectedLng);
@@ -115,7 +105,6 @@ export const AddItemPage: React.FC = () => {
     setLocationError(null);
   };
 
-  // 保存処理
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -134,11 +123,9 @@ export const AddItemPage: React.FC = () => {
       setIsSaving(true);
       setErrorMessage(null);
 
-      // 1. 画像の軽量化（ブラウザ側で圧縮）
       setSaveStepMessage('写真を圧縮しています...');
       const compressedFile = await compressImage(croppedBlob);
 
-      // 2. Supabase Storage へのアップロード
       setSaveStepMessage('写真をクラウドに保存しています...');
       const fileId = crypto.randomUUID();
       const filePath = `${user.id}/${fileId}.jpg`;
@@ -154,9 +141,7 @@ export const AddItemPage: React.FC = () => {
         throw new Error(`画像の保存に失敗しました: ${uploadError.message}`);
       }
 
-      // 3. items テーブルに情報を保存
       setSaveStepMessage('記録を保存しています...');
-      // 日付に現在の時刻を補完してISO文字列化
       const takenDateTime = new Date(`${takenDate}T12:00:00Z`).toISOString();
 
       const { error: dbError } = await supabase.from('items').insert({
@@ -172,12 +157,10 @@ export const AddItemPage: React.FC = () => {
       });
 
       if (dbError) {
-        // ロールバック的に画像を削除試行
         await supabase.storage.from('paper-items').remove([filePath]);
         throw new Error(`データの保存に失敗しました: ${dbError.message}`);
       }
 
-      // 4. アルバム一覧へ移動
       navigate('/', { replace: true });
     } catch (err: any) {
       console.error(err);
@@ -190,7 +173,6 @@ export const AddItemPage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-md mx-auto">
-      {/* 画面タイトル */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-serif text-xl font-bold text-amber-950">
@@ -202,7 +184,6 @@ export const AddItemPage: React.FC = () => {
         </div>
       </div>
 
-      {/* エラーメッセージ表示 */}
       {errorMessage && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-start gap-2">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -210,7 +191,6 @@ export const AddItemPage: React.FC = () => {
         </div>
       )}
 
-      {/* 隠し input 要素（カメラ撮影用とギャラリー選択用） */}
       <input
         type="file"
         ref={cameraInputRef}
@@ -227,21 +207,19 @@ export const AddItemPage: React.FC = () => {
         className="hidden"
       />
 
-      {/* 写真選択 & プレビュー領域 */}
+      {/* 写真選択 & プレビュー */}
       <div>
         <label className="block text-xs font-semibold text-stone-700 mb-1.5">
           写真 <span className="text-red-500">*</span>
         </label>
 
         {previewUrl ? (
-          // 写真選択後のプレビュー
           <div className="relative rounded-2xl overflow-hidden border border-paper-300 bg-paper-100 shadow-sm group">
             <img
               src={previewUrl}
               alt="プレビュー"
               className="w-full max-h-72 object-contain mx-auto bg-stone-900/5"
             />
-            {/* 切り抜きやり直し・差し替えボタンバー */}
             <div className="absolute bottom-2 left-2 right-2 flex justify-end gap-2 bg-black/40 backdrop-blur p-1.5 rounded-xl">
               <button
                 type="button"
@@ -262,7 +240,6 @@ export const AddItemPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          // 写真がまだ選ばれていないときのボタンエリア
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -291,14 +268,13 @@ export const AddItemPage: React.FC = () => {
         )}
       </div>
 
-      {/* 入力フォーム */}
       <form onSubmit={handleSave} className="space-y-4">
-        {/* 種類選択 */}
+        {/* 種類選択（スタンプ / 半券・チケット / その他 の3択） */}
         <div>
           <label className="block text-xs font-semibold text-stone-700 mb-1.5">
             種類 <span className="text-red-500">*</span>
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {(Object.keys(PAPER_TYPE_LABELS) as PaperType[]).map((t) => {
               const isSelected = type === t;
               return (
@@ -306,7 +282,7 @@ export const AddItemPage: React.FC = () => {
                   key={t}
                   type="button"
                   onClick={() => setType(t)}
-                  className={`py-2 px-3 text-xs font-medium rounded-xl border transition-all text-center ${
+                  className={`py-2 px-2 text-xs font-medium rounded-xl border transition-all text-center ${
                     isSelected
                       ? 'border-amber-800 bg-amber-800 text-white shadow-xs font-bold'
                       : 'border-paper-200 bg-white/70 text-stone-700 hover:bg-paper-100'
@@ -324,16 +300,14 @@ export const AddItemPage: React.FC = () => {
           <label className="block text-xs font-semibold text-stone-700 mb-1">
             タイトル <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="例: 上野の森美術館 入場券、京都の記念スタンプ"
-              required
-              className="w-full px-3.5 py-2.5 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-700/30 focus:border-amber-700"
-            />
-          </div>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="例: 上野の森美術館 入場券、京都の記念スタンプ"
+            required
+            className="w-full px-3.5 py-2.5 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-700/30 focus:border-amber-700"
+          />
         </div>
 
         {/* 日付 */}
@@ -353,7 +327,7 @@ export const AddItemPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 場所（現在地または手動指定） */}
+        {/* 場所 */}
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-semibold text-stone-700">
@@ -401,7 +375,6 @@ export const AddItemPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 地図指定 & 再取得ボタン */}
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
@@ -424,23 +397,20 @@ export const AddItemPage: React.FC = () => {
           </div>
         </div>
 
-        {/* メモ（任意） */}
+        {/* メモ */}
         <div>
           <label className="block text-xs font-semibold text-stone-700 mb-1">
             メモ <span className="text-[10px] font-normal text-stone-400">（任意）</span>
           </label>
-          <div className="relative">
-            <textarea
-              value={memo}
-              onChange={(e) => setMemo(e.target.value)}
-              placeholder="誰と行ったか、展示の感想、旅の思い出など..."
-              rows={3}
-              className="w-full px-3.5 py-2 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-700/30 focus:border-amber-700 resize-none"
-            />
-          </div>
+          <textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="誰と行ったか、展示の感想、旅の思い出など..."
+            rows={3}
+            className="w-full px-3.5 py-2 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-700/30 focus:border-amber-700 resize-none"
+          />
         </div>
 
-        {/* 保存ボタン */}
         <div className="pt-2">
           <button
             type="submit"
@@ -462,7 +432,6 @@ export const AddItemPage: React.FC = () => {
         </div>
       </form>
 
-      {/* 切り抜きモーダル */}
       {isCropping && rawImageSrc && (
         <ImageCropper
           imageSrc={rawImageSrc}
@@ -471,7 +440,6 @@ export const AddItemPage: React.FC = () => {
         />
       )}
 
-      {/* 地図で場所を選ぶモーダル */}
       {isMapModalOpen && (
         <LocationPickerModal
           initialLat={lat}
