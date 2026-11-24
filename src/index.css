@@ -8,3 +8,36 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* 横スクロールバーを非表示にするユーティリティ */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Leaflet ポップアップの紙もの手帖スタイル調整 */
+.paper-map-popup .leaflet-popup-content-wrapper {
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+  border: 1px solid #ebe4d5;
+}
+
+.paper-map-popup .leaflet-popup-content {
+  margin: 8px;
+  line-height: 1.4;
+}
+
+.paper-map-popup .leaflet-popup-tip {
+  background: #ffffff;
+}
+
+/* カスタムマーカーの背景枠リセット */
+.paper-map-marker {
+  background: transparent !important;
+  border: none !important;
+}
