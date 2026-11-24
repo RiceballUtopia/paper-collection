@@ -5,6 +5,7 @@ import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { AlbumPage } from './pages/AlbumPage';
 import { AddItemPage } from './pages/AddItemPage';
+import { ItemDetailPage } from './pages/ItemDetailPage';
 import { MapPage } from './pages/MapPage';
 
 // ログイン必須のルートを保護するコンポーネント
@@ -67,6 +68,7 @@ export const App: React.FC = () => {
           >
             <Route index element={<AlbumPage />} />
             <Route path="new" element={<AddItemPage />} />
+            <Route path="items/:id" element={<ItemDetailPage />} />
             <Route path="map" element={<MapPage />} />
           </Route>
 

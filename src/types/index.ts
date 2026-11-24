@@ -24,6 +24,11 @@ export interface Item {
   created_at: string;      // 登録日時
 }
 
+// 画面表示用：署名付き画像URLを追加したアイテム型
+export interface ItemWithUrl extends Item {
+  imageUrl: string;
+}
+
 // アイテム新規登録時の入力データ型
 export interface CreateItemInput {
   type: PaperType;
@@ -34,4 +39,12 @@ export interface CreateItemInput {
   lng?: number | null;
   place_name?: string | null;
   imageFile: Blob;
+}
+
+// アイテム更新時の入力データ型
+export interface UpdateItemInput {
+  type: PaperType;
+  title: string;
+  memo?: string | null;
+  taken_at: string;
 }
