@@ -3,16 +3,15 @@ import { Link } from 'react-router-dom';
 import { geoMercator, geoPath } from 'd3-geo';
 import japanGeoJson from '../data/japan-prefectures.json';
 import { ItemWithUrl, PAPER_TYPE_LABELS } from '../types';
-import { ArrowLeft, MapPin, Calendar, ExternalLink } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, ExternalLink, Compass } from 'lucide-react';
 
 interface PrefectureDetailModalProps {
   prefCode: number;
   prefName: string;
-  items: ItemWithUrl[]; // この県に属する全アイテム
+  items: ItemWithUrl[];
   onBack: () => void;
 }
 
-// 種類ごとのスポットカラーと日本語ラベル（コントラスト重視）
 const SPOT_CONFIG = {
   stamp: { color: '#c1121f', label: 'スタンプ' },
   ticket: { color: '#1d3557', label: '半券・チケット' },
@@ -27,35 +26,71 @@ export const PrefectureDetailModal: React.FC<PrefectureDetailModalProps> = ({
 }) => {
   const [selectedItem, setSelectedItem] = useState<ItemWithUrl | null>(items[0] || null);
 
+  // 東京都（prefCode === 13）専用の表示切り替え（'mainland': 本土（23区・多摩） / 'islands': 伊豆・小笠原諸島）
+  const [tokyoViewMode, setTokyoViewMode] = useState<'mainland' | 'islands'>('mainland');
+
   // 対象の都道府県 GeoJSON フィーチャーを抽出
-  const feature = useMemo(() => {
+  const rawFeature = useMemo(() => {
     return (japanGeoJson as any).features.find(
       (f: any) => f.properties.code === prefCode
     );
   }, [prefCode]);
 
+  // 東京都の場合、本土と諸島にポリゴンを分割
+  const activeFeature = useMemo(() => {
+    if (!rawFeature) return null;
+
+    // 東京都の場合
+    if (prefCode === 13 && rawFeature.geometry.type === 'MultiPolygon') {
+      const mainlandPolys = rawFeature.geometry.coordinates.filter((poly: any) => {
+        const lats = poly[0].map((pt: any) => pt[1]);
+        return Math.min(...lats) >= 35.45; // 北緯35.45度以上が本土
+      });
+
+      const islandsPolys = rawFeature.geometry.coordinates.filter((poly: any) => {
+        const lats = poly[0].map((pt: any) => pt[1]);
+        return Math.min(...lats) < 35.45; // 北緯35.45度未満が諸島
+      });
+
+      const targetCoordinates =
+        tokyoViewMode === 'mainland'
+          ? mainlandPolys.length > 0 ? mainlandPolys : rawFeature.geometry.coordinates
+          : islandsPolys.length > 0 ? islandsPolys : rawFeature.geometry.coordinates;
+
+      return {
+        ...rawFeature,
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates: targetCoordinates,
+        },
+      };
+    }
+
+    return rawFeature;
+  }, [rawFeature, prefCode, tokyoViewMode]);
+
   // SVG サイズ
   const width = 360;
   const height = 300;
 
-  // 都道府県の輪郭に合わせて自動拡大フィットするプロジェクション
+  // 都道府県（または本土・諸島）に合わせて自動拡大フィットするプロジェクション
   const { projection, pathData } = useMemo(() => {
-    if (!feature) return { projection: null, pathData: '' };
+    if (!activeFeature) return { projection: null, pathData: '' };
 
     const proj = geoMercator().fitExtent(
       [
         [24, 24],
         [width - 24, height - 24],
       ],
-      feature
+      activeFeature
     );
 
     const pathGen = geoPath().projection(proj);
     return {
       projection: proj,
-      pathData: pathGen(feature) || '',
+      pathData: pathGen(activeFeature) || '',
     };
-  }, [feature, width, height]);
+  }, [activeFeature, width, height]);
 
   // 各アイテムの地図上のピクセル座標を計算
   const itemCoordinates = useMemo(() => {
@@ -71,6 +106,7 @@ export const PrefectureDetailModal: React.FC<PrefectureDetailModalProps> = ({
           y: coords ? coords[1] : -999,
         };
       })
+      // 画面内に収まるスポットのみ描画（本土モード時は本土内、諸島モード時は諸島内のスポット）
       .filter((pos) => pos.x >= 0 && pos.x <= width && pos.y >= 0 && pos.y <= height);
   }, [items, projection, width, height]);
 
@@ -88,9 +124,16 @@ export const PrefectureDetailModal: React.FC<PrefectureDetailModalProps> = ({
         </button>
 
         <div className="text-right">
-          <h3 className="font-serif text-lg font-bold text-amber-950">
-            {prefName}
-          </h3>
+          <div className="flex items-baseline justify-end gap-1.5">
+            <h3 className="font-serif text-lg font-bold text-amber-950">
+              {prefName}
+            </h3>
+            {prefCode === 13 && (
+              <span className="text-[11px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full">
+                {tokyoViewMode === 'mainland' ? '本土（23区・多摩）' : '伊豆・小笠原諸島'}
+              </span>
+            )}
+          </div>
           <p className="text-[11px] text-stone-500 font-medium">
             {items.length} 件の記念品
           </p>
@@ -98,24 +141,39 @@ export const PrefectureDetailModal: React.FC<PrefectureDetailModalProps> = ({
       </div>
 
       {/* 都道府県の拡大地図カード */}
-      <div className="bg-white rounded-3xl p-3 border border-paper-200/90 shadow-md">
-        {/* 凡例バー */}
-        <div className="flex items-center justify-between text-[10px] text-stone-600 px-2 pb-2 border-b border-paper-100">
-          <span className="font-bold text-stone-700">訪問スポット凡例:</span>
-          <div className="flex items-center gap-3">
+      <div className="bg-white rounded-3xl p-3.5 border border-paper-200/90 shadow-md">
+        {/* 凡例バー & 東京都の諸島切り替えボタン */}
+        <div className="flex items-center justify-between pb-2.5 mb-1 border-b border-paper-100">
+          {/* 凡例 */}
+          <div className="flex items-center gap-2.5 text-[10px] text-stone-600">
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-[#c1121f] inline-block shadow-2xs" />
               スタンプ
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-[#1d3557] inline-block shadow-2xs" />
-              半券・チケット
+              半券
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-[#b45309] inline-block shadow-2xs" />
               その他
             </span>
           </div>
+
+          {/* 東京都の場合の「諸島を見る／本土を見る」切り替えボタン */}
+          {prefCode === 13 && (
+            <button
+              type="button"
+              onClick={() => {
+                setTokyoViewMode((prev) => (prev === 'mainland' ? 'islands' : 'mainland'));
+                setSelectedItem(null);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1 bg-amber-800/10 hover:bg-amber-800/20 text-amber-950 border border-amber-800/30 text-xs font-bold rounded-xl transition-all shadow-2xs active:scale-95"
+            >
+              <Compass className="w-3.5 h-3.5 text-amber-800 animate-spin-slow" />
+              <span>{tokyoViewMode === 'mainland' ? '諸島を見る' : '本土を見る'}</span>
+            </button>
+          )}
         </div>
 
         {/* 拡大SVG地図 */}
@@ -129,9 +187,9 @@ export const PrefectureDetailModal: React.FC<PrefectureDetailModalProps> = ({
               d={pathData}
               fill="#f5f2eb"
               stroke="#2d6a4f"
-              strokeWidth="1.5"
+              strokeWidth={prefCode === 13 && tokyoViewMode === 'islands' ? '2.5' : '1.5'}
               strokeLinejoin="round"
-              className="drop-shadow-xs"
+              className="drop-shadow-xs transition-all duration-300"
             />
 
             {/* 訪問スポットのプロット */}
@@ -145,10 +203,8 @@ export const PrefectureDetailModal: React.FC<PrefectureDetailModalProps> = ({
                   className="cursor-pointer"
                   onClick={() => setSelectedItem(item)}
                 >
-                  {/* スマホで押しやすい広めの透明タップターゲット（半径18px） */}
                   <circle cx={x} cy={y} r="18" fill="transparent" />
 
-                  {/* 選択中の波紋エフェクト */}
                   {isSelected && (
                     <circle
                       cx={x}
@@ -160,7 +216,6 @@ export const PrefectureDetailModal: React.FC<PrefectureDetailModalProps> = ({
                     />
                   )}
 
-                  {/* 視覚的なスポット円 */}
                   <circle
                     cx={x}
                     cy={y}
@@ -176,7 +231,7 @@ export const PrefectureDetailModal: React.FC<PrefectureDetailModalProps> = ({
           </svg>
         </div>
 
-        {/* スポット情報プレビュー（タップしたピンの情報） */}
+        {/* スポット情報プレビュー */}
         {selectedItem && (
           <div className="mt-2 p-3 bg-paper-100 rounded-2xl flex items-center justify-between gap-3 border border-paper-200">
             <div className="min-w-0 flex-1">
