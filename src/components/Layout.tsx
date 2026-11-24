@@ -10,13 +10,20 @@ export const Layout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-paper-50 text-paper-900">
       {/* 共通ヘッダー */}
-      <header className="sticky top-0 z-20 bg-paper-100/90 backdrop-blur-md border-b border-paper-200 px-4 py-3 flex items-center justify-between shadow-sm">
+      <header className="sticky top-0 z-20 bg-paper-100/90 backdrop-blur-md border-b border-paper-200 px-4 py-3 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-2">
-          {/* 紙ものを象徴するシンプルなアイコン */}
-          <span className="text-xl">📜</span>
-          <h1 className="font-serif font-bold text-lg text-amber-950 tracking-wide">
-            紙もの手帖
-          </h1>
+          {/* 旅印を象徴する朱色の角印風アイコン */}
+          <div className="w-7 h-7 rounded-lg bg-amber-900 text-white flex items-center justify-center font-serif text-sm font-bold shadow-2xs border border-amber-950/20">
+            印
+          </div>
+          <div>
+            <h1 className="font-serif font-bold text-base text-amber-950 tracking-wider leading-none">
+              旅印
+            </h1>
+            <span className="text-[9px] text-stone-400 font-sans tracking-tight">
+              たびじるし
+            </span>
+          </div>
         </div>
 
         {/* ユーザー情報＆ログアウトボタン */}
@@ -36,7 +43,7 @@ export const Layout: React.FC = () => {
         )}
       </header>
 
-      {/* メイン画面（ボトムナビにかぶらないよう下部に余白を確保） */}
+      {/* メイン画面（下部ナビにかぶらないよう余白を確保） */}
       <main className="flex-1 pb-24">
         <div className="max-w-md mx-auto px-4 py-4">
           <Outlet />

@@ -5,9 +5,9 @@
   <line x1="120" y1="180" x2="392" y2="180" stroke="#f0ebe1" stroke-width="8" stroke-linecap="round"/>
   <line x1="120" y1="230" x2="350" y2="230" stroke="#f0ebe1" stroke-width="8" stroke-linecap="round"/>
   <line x1="120" y1="280" x2="370" y2="280" stroke="#f0ebe1" stroke-width="8" stroke-linecap="round"/>
-  <!-- スタンプ調のワンポイント -->
-  <circle cx="340" cy="330" r="50" fill="#9a3412" fill-opacity="0.12" stroke="#9a3412" stroke-width="6" stroke-dasharray="8 6"/>
-  <text x="340" y="342" font-family="serif" font-size="32" font-weight="bold" fill="#9a3412" text-anchor="middle">紙</text>
+  <!-- 「旅印」の朱色スタンプ落款 -->
+  <rect x="290" y="280" width="100" height="100" rx="20" fill="#9a3412" fill-opacity="0.12" stroke="#9a3412" stroke-width="6" stroke-dasharray="10 6"/>
+  <text x="340" y="345" font-family="serif" font-size="44" font-weight="bold" fill="#9a3412" text-anchor="middle">旅</text>
   <!-- ピン留めアクセント -->
   <circle cx="256" cy="116" r="14" fill="#b45309" stroke="#ffffff" stroke-width="4"/>
 </svg>

@@ -12,7 +12,6 @@ export const LoginPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // メールアドレスとパスワードによるログイン・新規登録
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -32,7 +31,6 @@ export const LoginPage: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // 新規登録
         const { error, data } = await supabase.auth.signUp({
           email,
           password,
@@ -42,13 +40,12 @@ export const LoginPage: React.FC = () => {
 
         if (data.user && data.session === null) {
           setSuccessMessage(
-            '確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。（※メール確認をオフにしている場合はそのままログインできます）'
+            '確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。'
           );
         } else {
           setSuccessMessage('登録が完了しました！');
         }
       } else {
-        // ログイン
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -70,7 +67,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  // Googleログインボタンの処理
   const handleGoogleLogin = async () => {
     setErrorMessage(null);
     const { error } = await signInWithGoogle();
@@ -82,20 +78,23 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-paper-50 flex flex-col justify-center items-center px-4 py-8">
       <div className="w-full max-w-sm">
-        {/* アプリのロゴと紹介 */}
+        {/* アプリのロゴと新キャッチコピー */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100/80 text-amber-900 mb-3 shadow-inner">
-            <span className="text-3xl">📜</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-900 text-white mb-3 shadow-md border-2 border-white ring-2 ring-amber-900/20">
+            <span className="font-serif text-3xl font-bold">印</span>
           </div>
-          <h1 className="font-serif text-2xl font-bold text-amber-950 tracking-wider">
-            紙もの手帖
+          <h1 className="font-serif text-3xl font-bold text-amber-950 tracking-widest">
+            旅印
           </h1>
-          <p className="text-xs text-stone-600 mt-1">
-            旅先や街角で手にした紙の記念品を、いつでも掌に。
+          <p className="text-[11px] text-stone-400 font-sans tracking-widest -mt-0.5 mb-2">
+            たびじるし
+          </p>
+          <p className="text-xs text-stone-600 leading-relaxed font-sans px-2">
+            旅先で出会った紙の記憶を、あなたの日本地図に。
           </p>
         </div>
 
-        {/* Supabase設定が未完了の場合の警告カード */}
+        {/* Supabase未設定警告 */}
         {!isSupabaseConfigured && (
           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs leading-relaxed shadow-sm">
             <div className="flex items-center gap-1.5 font-bold mb-1">
@@ -110,7 +109,6 @@ export const LoginPage: React.FC = () => {
 
         {/* ログイン / 新規登録 カード */}
         <div className="bg-white/80 backdrop-blur border border-paper-200/90 rounded-2xl shadow-sm p-6">
-          {/* タブ切り替え */}
           <div className="flex border-b border-paper-200 mb-6">
             <button
               type="button"
@@ -144,7 +142,6 @@ export const LoginPage: React.FC = () => {
             </button>
           </div>
 
-          {/* エラー / 成功 メッセージ表示 */}
           {errorMessage && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -159,7 +156,6 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* 入力フォーム */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-stone-700 mb-1">
@@ -210,7 +206,6 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* 区切り線 */}
           <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-paper-200" />
@@ -220,7 +215,6 @@ export const LoginPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Googleログインボタン */}
           <button
             type="button"
             onClick={handleGoogleLogin}
