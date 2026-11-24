@@ -1,5 +1,5 @@
 import imageCompression from 'browser-image-compression';
-import { Area } from 'react-easy-crop';
+import { PixelCrop } from 'react-image-crop';
 
 /**
  * 画像のURLからImageオブジェクトを生成するヘルパー
@@ -14,15 +14,35 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
   });
 
 /**
- * react-easy-crop で指定された切り抜き領域（pixelCrop）をもとに、
- * Canvasを使って切り抜いた画像Blobを生成します。
+ * 画像を時計回りに90度回転させた新しいDataURLを生成するヘルパー
  */
-export async function getCroppedImg(
-  imageSrc: string,
-  pixelCrop: Area,
-  rotation = 0
-): Promise<Blob> {
+export async function rotateImage90(imageSrc: string): Promise<string> {
   const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) throw new Error('Canvas context not available');
+
+  // 90度回転するので幅と高さを入れ替える
+  canvas.width = image.height;
+  canvas.height = image.width;
+
+  // キャンバスの中心に移動して90度回転
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((90 * Math.PI) / 180);
+  ctx.drawImage(image, -image.width / 2, -image.height / 2);
+
+  return canvas.toDataURL('image/jpeg', 0.95);
+}
+
+/**
+ * react-image-crop の PixelCrop（実際の表示倍率を考慮した切り抜き領域）をもとに、
+ * 切り抜いた画像Blob（JPEG）を生成します。
+ */
+export async function getCroppedImageBlob(
+  imageElement: HTMLImageElement,
+  crop: PixelCrop
+): Promise<Blob> {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
@@ -30,55 +50,33 @@ export async function getCroppedImg(
     throw new Error('Canvas context not available');
   }
 
-  // 回転計算用の設定
-  const rotRad = (rotation * Math.PI) / 180;
+  // 表示されている画像のサイズと、自然な元画像サイズ（naturalWidth/Height）の比率を計算
+  const scaleX = imageElement.naturalWidth / imageElement.width;
+  const scaleY = imageElement.naturalHeight / imageElement.height;
 
-  // バウンディングボックスのサイズ
-  const { width: bBoxWidth, height: bBoxHeight } = calculateBoundingBox(
-    image.width,
-    image.height,
-    rotation
-  );
+  // 実ピクセルでの切り抜きサイズ
+  const pixelX = crop.x * scaleX;
+  const pixelY = crop.y * scaleY;
+  const pixelWidth = crop.width * scaleX;
+  const pixelHeight = crop.height * scaleY;
 
-  // キャンバスのサイズを設定
-  canvas.width = bBoxWidth;
-  canvas.height = bBoxHeight;
+  canvas.width = Math.floor(pixelWidth);
+  canvas.height = Math.floor(pixelHeight);
 
-  // キャンバスの中心を基準に回転
-  ctx.translate(bBoxWidth / 2, bBoxHeight / 2);
-  ctx.rotate(rotRad);
-  ctx.translate(-image.width / 2, -image.height / 2);
-
-  // 元画像を描画
-  ctx.drawImage(image, 0, 0);
-
-  // 切り抜き用の新しいキャンバスを作成
-  const croppedCanvas = document.createElement('canvas');
-  const croppedCtx = croppedCanvas.getContext('2d');
-
-  if (!croppedCtx) {
-    throw new Error('Cropped canvas context not available');
-  }
-
-  croppedCanvas.width = pixelCrop.width;
-  croppedCanvas.height = pixelCrop.height;
-
-  // 指定された領域だけを切り出して描画
-  croppedCtx.drawImage(
-    canvas,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
+  ctx.drawImage(
+    imageElement,
+    pixelX,
+    pixelY,
+    pixelWidth,
+    pixelHeight,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    canvas.width,
+    canvas.height
   );
 
-  // Blob（JPEG形式）として書き出す
   return new Promise((resolve, reject) => {
-    croppedCanvas.toBlob(
+    canvas.toBlob(
       (blob) => {
         if (!blob) {
           reject(new Error('Canvas is empty'));
@@ -93,28 +91,15 @@ export async function getCroppedImg(
 }
 
 /**
- * 回転時のバウンディングボックスサイズを計算
- */
-function calculateBoundingBox(width: number, height: number, rotation: number) {
-  const rad = (rotation * Math.PI) / 180;
-  const sin = Math.abs(Math.sin(rad));
-  const cos = Math.abs(Math.cos(rad));
-  return {
-    width: Math.floor(width * cos + height * sin),
-    height: Math.floor(width * sin + height * cos),
-  };
-}
-
-/**
  * browser-image-compression を使用して画像をブラウザ側で軽量化します。
- * Supabase Storageの無料枠（500MB）を圧迫しないよう、最大幅1600px・最大約600KBに抑えます。
+ * Supabase Storageの無料枠（500MB）を節約するため、最大幅1600px・約600KBに抑えます。
  */
 export async function compressImage(imageFile: Blob): Promise<File> {
   const options = {
-    maxSizeMB: 0.6,          // 最大ファイルサイズ（約600KB）
-    maxWidthOrHeight: 1600,   // 最大幅または高さ（きれいに見えつつ軽量）
-    useWebWorker: true,      // 画面の動作が重くならないようバックグラウンド処理
-    fileType: 'image/jpeg',  // JPEGで統一
+    maxSizeMB: 0.6,
+    maxWidthOrHeight: 1600,
+    useWebWorker: true,
+    fileType: 'image/jpeg',
   };
 
   try {
