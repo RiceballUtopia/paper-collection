@@ -6,7 +6,8 @@ import { Item, ItemWithUrl, PaperType, PAPER_TYPE_LABELS } from '../types';
 import { JapanMap } from '../components/JapanMap';
 import { PrefectureDetailModal } from '../components/PrefectureDetailModal';
 import { getPrefectureCodeFromCoordinates } from '../lib/geoUtils';
-import { Loader2, Sparkles, Award, MapPin, Calendar } from 'lucide-react';
+import { Loader2, Sparkles, Award, MapPin, Calendar, Share2 } from 'lucide-react';
+import { shareAppOrAchievement } from '../lib/shareUtils';
 
 export const MapPage: React.FC = () => {
   const { user } = useAuth();
@@ -174,11 +175,26 @@ export const MapPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-right">
-          <span className="text-[11px] font-bold text-stone-600">
-            {Math.round((visitedPrefCodes.size / 47) * 100)}%
-          </span>
-          <p className="text-[9px] text-stone-400">訪問完了</p>
+        <div className="flex items-center gap-2">
+          <div className="text-right">
+            <span className="text-[11px] font-bold text-stone-600">
+              {Math.round((visitedPrefCodes.size / 47) * 100)}%
+            </span>
+            <p className="text-[9px] text-stone-400">訪問完了</p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              shareAppOrAchievement({
+                title: "旅印（たびじるし）",
+                text: `旅印で【${mapType === "stamp" ? "スタンプ" : "半券・チケット"}】${visitedPrefCodes.size}/47 都道府県を訪問しました！🗾\n旅先で出会った紙の記憶を、あなたの日本地図に。 #旅印 #コレクション`,
+              })
+            }
+            className="p-2 bg-paper-100 hover:bg-paper-200 text-stone-700 rounded-xl transition-colors shadow-2xs"
+            title="SNSでシェア"
+          >
+            <Share2 className="w-4 h-4 text-amber-900" />
+          </button>
         </div>
       </div>
 

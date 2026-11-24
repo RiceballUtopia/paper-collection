@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { shareAppOrAchievement } from '../lib/shareUtils';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +15,7 @@ import {
   Check,
   X,
   AlertTriangle,
+  Share2,
 } from 'lucide-react';
 
 export const ItemDetailPage: React.FC = () => {
@@ -200,6 +202,21 @@ export const ItemDetailPage: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() =>
+              item &&
+              shareAppOrAchievement({
+                title: `${item.title} - 旅印`,
+                text: `旅印で「${item.title}」(${item.place_name || ""})の紙ものを記録しました！📜 #旅印 #紙もの`,
+                url: window.location.href,
+              })
+            }
+            className="p-1.5 text-stone-500 hover:text-stone-800 rounded-lg hover:bg-paper-200/50 transition-colors"
+            title="シェア"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
           <button
             type="button"
             onClick={() => setIsEditing(true)}
